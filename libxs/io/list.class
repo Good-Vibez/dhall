@@ -1,0 +1,48 @@
+{- vim: set ft=dhall : -}
+λ(item : Type) →
+λ(item_desc : Text) →
+  let Io = List item
+
+  let Dt = item
+
+  let u = ../util/...
+
+  let io = ./.class Io Dt
+
+  let class = io.class
+
+  let Unit = class.params.Unit
+
+  let Proto = class.Proto
+
+  let proto = class.proto
+
+  let unit = Unit.unit
+
+  let wrt
+      : proto.wrt
+      = u.list/append item
+
+  let seq
+      : proto.seq
+      = u.list/concat item
+
+  let mty
+      : proto.mty
+      = [] : Io
+
+  let opn
+      : proto.opn
+      = λ(_ : Unit) → mty
+
+  let cls
+      : proto.cls
+      = λ(_ : Io) → _
+
+  let proto
+      : Proto
+      = { wrt, seq, opn, cls, mty }
+
+  let params = class.params ∧ { item, item_desc }
+
+  in  class ⫽ { proto, params }

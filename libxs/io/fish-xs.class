@@ -1,0 +1,30 @@
+{- vim: set ft=dhall : -}
+let u/ = ../util/...
+
+let nil = u/.tuple/.nil
+
+let xs-ast = ./xs-ast.class
+
+let xs/fmt/ = ../xs.fmt/...
+
+let Io = xs-ast.params.io
+
+let Dt = Text
+
+let Ft = xs/fmt/.Stmt
+
+let class = (./.class Io Dt).fmt/deco Ft
+
+let fmt
+    : class.proto.fmt
+    = xs/fmt/.fmt/stmt
+
+let proto = xs-ast.proto ⫽ { fmt }
+
+let proto
+    : class.Proto
+    = proto
+      with prt = class.proto.prt proto
+
+in  class
+  with proto = proto

@@ -1,0 +1,88 @@
+{- vim: set ft=dhall : -}
+let path/ = ../path/...
+
+let Path = path/.Path
+
+let Path/basename = path/.Path/basename
+
+let Path/to_text = path/.Path/to_text
+
+let util/ = ../util/...
+
+let Map = util/.Map
+
+let Expr =
+      < str : Text
+      | fatstr : { f : Natural, s : Text }
+      | bool : Bool
+      | var : Text
+      | source : Text
+      >
+
+let Args = List Expr
+
+let Env = Map Text Expr
+
+let Output = < display | string | stream | null >
+
+let Stdin = < default | file : Path | stream : Text | tty >
+
+let Exec =
+      { cmd : Path
+      , args : Args
+      , env : Optional Env
+      , cwd : Optional Path
+      , output : Optional Output
+      , stdin : Optional Stdin
+      , allowed_to_fail : Optional Bool
+      }
+
+let cmd = [ "cat" ]
+
+let args = [] : Args
+
+let env = None Env
+
+let cwd = None Path
+
+let output = None Output
+
+let stdin = None Stdin
+
+let allowed_to_fail = None Bool
+
+let Exec/default
+    : Exec
+    = { cmd, args, env, cwd, output, stdin, allowed_to_fail }
+
+let Rval = < expr : Expr | exec : Exec >
+
+let Setting = { _1 : Text, _2 : Rval }
+
+let Writing = { _1 : Path, _2 : Rval }
+
+let Stmt =
+      < set : Setting
+      | alias : Setting
+      | dealias : Text
+      | write_file : Writing
+      >
+
+let Script = List Stmt
+
+in  { Script
+    , Stmt
+    , Setting
+    , Rval
+    , Expr
+    , Exec
+    , Exec/default
+    , Args
+    , Env
+    , Output
+    , Path
+    , Path/basename
+    , Path/to_text
+    , Stdin
+    , Writing
+    }

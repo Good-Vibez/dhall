@@ -1,0 +1,36 @@
+{- vim: set ft=dhall : -}
+let u/ = ../util/...
+
+let io/class = ../io/fish-xs.class
+
+let io/traits = io/class.params
+
+let io/Proto = io/class.Proto
+
+let io/system
+    : io/Proto
+    = io/class.proto
+
+let iot = io/traits
+
+let ios = io/system
+
+let Io = iot.io
+
+let print_all
+    : List iot.ft → Io → Io
+    = λ(script : List iot.ft) → u/.list/fold_left iot.ft script Io ios.prt
+
+let new_io
+    : Io
+    = [] : Io
+
+let open_io
+    : Io
+    = ios.opn iot.Unit.unit
+
+let write_script
+    : List iot.ft → Io
+    = λ(script : List iot.ft) → ios.cls (print_all script open_io)
+
+in  { write_script }

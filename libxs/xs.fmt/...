@@ -1,0 +1,343 @@
+{- vim: set ft=dhall : -}
+let u/ = ../util/...
+
+let xs/ = ../xs/...
+
+let Path = xs/.Path
+
+let Exec = xs/.Exec
+
+let Expr = xs/.Expr
+
+let Stmt = xs/.Stmt
+
+let Setg = xs/.Setting
+
+let Wrtg = xs/.Writing
+
+let Rval = xs/.Rval
+
+let Tkn = List Text
+
+let empty = [] : Tkn
+
+let fatstr
+    : Natural → Text → Text
+    = λ(fat : Natural) →
+      λ(str : Text) →
+        let fat = u/.text/rep fat "#"
+
+        let fat0 = "r${fat}\""
+
+        let fat1 = "\"${fat}"
+
+        in  "${fat0}${str}${fat1}"
+
+let fat1 = fatstr 1
+
+let fat3 = fatstr 3
+
+let fat5 = fatstr 5
+
+let fmt/str
+    : Text → Tkn
+    = λ(t : Text) → [ "\"${t}\"" ]
+
+let FatSpec = { f : Natural, s : Text }
+
+let fmt/fatstr
+    : FatSpec → Tkn
+    = λ(fts : FatSpec) → [ fatstr fts.f fts.s ]
+
+let fmt/bool
+    : Bool → Tkn
+    = λ(b : Bool) → [ if b then "true" else "false" ]
+
+let fmt/path
+    : Path → Tkn
+    = λ(p : Path) → fmt/str (xs/.Path/to_text p)
+
+let fmt/var
+    : Text → Tkn
+    = λ(v : Text) → [ "(var:" ] # fmt/str v # [ ")" ]
+
+let fmt/source
+    : Text → Tkn
+    = λ(v : Text) → [ "(source:" ] # fmt/str v # [ ")" ]
+
+let fmt/expr
+    : Expr → Tkn
+    = λ(_ : Expr) →
+        merge
+          { str = fmt/str
+          , fatstr = fmt/fatstr
+          , bool = fmt/bool
+          , var = fmt/var
+          , source = fmt/source
+          }
+          _
+
+let fmt/list
+    : ∀(a : Type) → (a → Tkn) → List a → Tkn
+    = λ(a : Type) →
+      λ(f : a → Tkn) →
+      λ(l : List a) →
+        let tkns
+            : List Tkn
+            = u/.list/map a Tkn f l
+
+        let tkns
+            : List Tkn
+            = u/.list/map Tkn Tkn (u/.list/append2 Text ", ") tkns
+
+        let tkns
+            : Tkn
+            = u/.list/concat Text tkns
+
+        in  [ "[" ] # tkns # [ "]" ]
+
+let fmt/optional
+    : ∀(a : Type) → (a → Tkn) → Optional a → Tkn
+    = λ(a : Type) →
+      λ(fmt/a : a → Tkn) →
+      λ(_ : Optional a) →
+        let _
+            : Optional Tkn
+            = u/.opt/map a Tkn fmt/a _
+
+        let _
+            : List Tkn
+            = u/.opt/to_list Tkn _
+
+        let _
+            : Tkn
+            = u/.list/concat Text _
+
+        let _
+            : Tkn
+            = if    u/.list/null Text _
+              then  _
+              else    [ ''
+
+                        ${"    "}''
+                      ]
+                    # _
+                    # [ "," ]
+
+        in  _
+
+let fmt/args
+    : xs/.Args → Tkn
+    = λ(_ : xs/.Args) →
+        let fmt/ =
+              λ(args : xs/.Args) →
+                let list
+                    : Tkn
+                    = fmt/list Expr fmt/expr args
+
+                in  [ "args: " ] # list
+
+        in  fmt/optional xs/.Args fmt/ (Some _)
+
+let fmt/output
+    : Optional xs/.Output → Tkn
+    = let show
+          : xs/.Output → Text
+          = λ(_ : xs/.Output) →
+                  "output: "
+              ++  merge
+                    { display = "Display"
+                    , string = "String"
+                    , stream = "Stream"
+                    , null = "Null"
+                    }
+                    _
+
+      let fmt/
+          : xs/.Output → Tkn
+          = λ(_ : xs/.Output) → [ show _ ]
+
+      in  fmt/optional xs/.Output fmt/
+
+let fmt/stdin
+    : Optional xs/.Stdin → Tkn
+    = let fmt/
+          : xs/.Stdin → Tkn
+          = λ(_ : xs/.Stdin) →
+                [ "stdin: " ]
+              # merge
+                  { default = [ "Default" ]
+                  , file =
+                      λ(path : Path) → [ "File(" ] # fmt/path path # [ ")" ]
+                  , stream =
+                      λ(name : Text) → [ "Source(" ] # fmt/str name # [ ")" ]
+                  , tty = [ "Tty" ]
+                  }
+                  _
+
+      in  fmt/optional xs/.Stdin fmt/
+
+let fmt/cmd
+    : Path → Tkn
+    = λ(_ : Path) →
+        let fmt/
+            : Path → Tkn
+            = λ(cmd : Path) → [ "cmd: " ] # fmt/path cmd
+
+        in  fmt/optional Path fmt/ (Some _)
+
+let fmt/cwd
+    : Optional Path → Tkn
+    = let fmt/
+          : Path → Tkn
+          = λ(_ : Path) → [ "cwd : Some(" ] # fmt/path _ # [ ")" ]
+
+      in  fmt/optional Path fmt/
+
+let fmt/allowed_to_fail
+    : Optional Bool → Tkn
+    = let fmt/
+          : Bool → Tkn
+          = λ(_ : Bool) → [ "allow_failure: " ] # fmt/bool _
+
+      in  fmt/optional Bool fmt/
+
+let fmt/exec
+    : Exec → Tkn
+    = λ(e : Exec) →
+          [ ''
+
+            ${"  "}Exec(''
+          ]
+        # fmt/output e.output
+        # fmt/cmd e.cmd
+        # fmt/args e.args
+        # fmt/cwd e.cwd
+        # fmt/stdin e.stdin
+        # fmt/allowed_to_fail e.allowed_to_fail
+        # [ ''
+
+            ${"  "}),''
+          ]
+
+let fmt/rval
+    : Rval → Tkn
+    = λ(rv : Rval) →
+        merge
+          { expr = λ(expr : Expr) → [ "Expr(" ] # fmt/expr expr # [ ")" ]
+          , exec = fmt/exec
+          }
+          rv
+
+let fmt/rval-for-writing
+    : Rval → Tkn
+    = λ(rv : Rval) →
+        merge
+          { expr = λ(expr : Expr) → [ "" ] # fmt/expr expr # [ "" ]
+          , exec = fmt/exec
+          }
+          rv
+
+let fmt/setting
+    : Text → Setg → Tkn
+    = λ(kw : Text) →
+      λ(stn : Setg) →
+          [ ''
+
+            ${"  "}''
+          , kw
+          , "("
+          ]
+        # fmt/str stn._1
+        # [ ", " ]
+        # fmt/rval stn._2
+        # [ ")," ]
+
+let fmt/stmt
+    : Stmt → Tkn
+    = λ(_ : Stmt) →
+        merge
+          { set = fmt/setting "Let"
+          , alias = fmt/setting "Alias"
+          , dealias =
+              λ(name : Text) →
+                  [ ''
+
+                    ${"  "}AliasStmt(''
+                  ]
+                # fmt/str name
+                # [ ")," ]
+          , write_file =
+              λ(w : Wrtg) →
+                let path
+                    : Path
+                    = w._1
+
+                let rvl
+                    : Rval
+                    = w._2
+
+                in    [ ''
+
+                        ${"  "}WriteFile(''
+                      ]
+                    # fmt/path path
+                    # [ ", " ]
+                    # fmt/rval-for-writing rvl
+                    # [ ")," ]
+          }
+          _
+
+let to_str
+    : ∀(a : Type) → (a → Tkn) → List a → Text
+    = λ(a : Type) →
+      λ(f : a → Tkn) →
+      λ(a- : List a) →
+        let tkns
+            : List Tkn
+            = u/.list/map a Tkn f a-
+
+        let tkn
+            : Tkn
+            = u/.list/concat Text tkns
+
+        let text
+            : Text
+            = u/.text/concat tkn
+
+        in  text
+
+in  { fmt/str
+    , fmt/bool
+    , fmt/path
+    , fmt/var
+    , fmt/source
+    , fmt/expr
+    , fmt/list
+    , fmt/optional
+    , fmt/args
+    , fmt/output
+    , fmt/stdin
+    , fmt/cwd
+    , fmt/allowed_to_fail
+    , fmt/exec
+    , fmt/rval
+    , fmt/setting
+    , fmt/stmt
+    , empty
+    , Path
+    , Exec
+    , Expr
+    , Stmt
+    , Setg
+    , Wrtg
+    , Rval
+    , Tkn
+    , fmt/fatstr
+    , fatstr
+    , fat1
+    , fat3
+    , fat5
+    , FatSpec
+    , to_str
+    }

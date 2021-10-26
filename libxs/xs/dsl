@@ -1,0 +1,528 @@
+{- vim: set ft=dhall : -}
+let u/ = ../util/...
+
+let xs/ = ./...
+
+let xs/fmt/ = ../xs.fmt/...
+
+let ToText = λ(a : Type) → a → Text
+
+let Path = xs/.Path
+
+let Path/to_text
+    : ToText Path
+    = xs/.Path/to_text
+
+let Path/basename = xs/.Path/basename
+
+let Args = xs/.Args
+
+let Expr = xs/.Expr
+
+let Writing = xs/.Writing
+
+let Output = xs/.Output
+
+let Stdin = xs/.Stdin
+
+let Exec = xs/.Exec
+
+let Rval = xs/.Rval
+
+let Stmt = xs/.Stmt
+
+let Script = xs/.Script
+
+let to_str = xs/fmt/.to_str
+
+let fmt/str = xs/fmt/.fmt/str
+
+let fmt/rval = xs/fmt/.fmt/rval
+
+let fmt/expr = xs/fmt/.fmt/expr
+
+let fmt/exec = xs/fmt/.fmt/exec
+
+let fmt/stmt = xs/fmt/.fmt/stmt
+
+let strlist
+    : List Text → xs/.Args
+    = u/.list/map Text xs/.Expr xs/.Expr.str
+
+let cmd = { Type = Exec, default = xs/.Exec/default }
+
+let can_fail = { allowed_to_fail = Some True }
+
+let allowed_to_fail = can_fail
+
+let out/string = { output = Some Output.string }
+
+let out/stream = { output = Some Output.stream }
+
+let out/display = { output = Some Output.display }
+
+let out/is/stream
+    : Output → Bool
+    = λ(_ : Output) →
+        merge { stream = True, display = False, null = False, string = False } _
+
+let out/null = { output = Some Output.null }
+
+let cwd = λ(cwd : Path) → { cwd = Some cwd }
+
+let arg/append
+    : List Expr → Exec → Exec
+    = λ(args : List Expr) → λ(_ : Exec) → _ with args = _.args # args
+
+let in/stream = λ(n : Text) → { stdin = Some (Stdin.stream n) } ⫽ cwd [ "." ]
+
+let in/file = λ(p : Path) → { stdin = Some (Stdin.file p) } ⫽ cwd [ "." ]
+
+let in/tty = { stdin = Some Stdin.tty } ⫽ cwd [ "." ]
+
+let exec_
+    : Exec → Rval
+    = Rval.exec
+
+let exec
+    : Exec → Stmt
+    = λ(e : Exec) → Stmt.set { _1 = "_", _2 = exec_ e }
+
+let set
+    : Text → Exec → Stmt
+    = λ(name : Text) →
+      λ(exec : Exec) →
+        Stmt.set { _1 = name, _2 = Rval.exec exec }
+
+let alias
+    : Text → Exec → Stmt
+    = λ(name : Text) →
+      λ(exec : Exec) →
+        Stmt.alias { _1 = name, _2 = Rval.exec exec }
+
+let dealias
+    : Text → Stmt
+    = Stmt.dealias
+
+let execlist
+    : List Exec → Script
+    = u/.list/map Exec Stmt exec
+
+let write_file
+    : Path → Expr → Stmt
+    = λ(_1 : Path) →
+      λ(expr : Expr) →
+        Stmt.write_file { _1, _2 = Rval.expr expr }
+
+let fatstr
+    : Natural → Text → Expr
+    = λ(f : Natural) → λ(s : Text) → Expr.fatstr { f, s }
+
+let fat1
+    : Text → Expr
+    = fatstr 1
+
+let fat3
+    : Text → Expr
+    = fatstr 3
+
+let fat5
+    : Text → Expr
+    = fatstr 5
+
+let str
+    : Text → Expr
+    = Expr.str
+
+let var
+    : Text → Expr
+    = Expr.var
+
+let to_str/
+    : ∀(a : Type) → (a → xs/fmt/.Tkn) → ToText a
+    = λ(a : Type) → λ(f : a → xs/fmt/.Tkn) → λ(v : a) → to_str a f [ v ]
+
+let to_str/stmt
+    : ToText Stmt
+    = to_str/ Stmt fmt/stmt
+
+let to_str/script
+    : ToText Script
+    = λ(s : Script) → u/.text/concat (u/.list/map Stmt Text to_str/stmt s)
+
+let to_str/exec
+    : ToText Exec
+    = to_str/ Exec fmt/exec
+
+let to_str/expr
+    : ToText Expr
+    = to_str/ Expr fmt/expr
+
+let to_str/str
+    : ToText Text
+    = to_str/ Text fmt/str
+
+let to_str/-full
+    : ∀(a : Type) → ToText a → ToText a
+    = λ(a : Type) → λ(to_str/ : ToText a) → λ(v : a) → "Script([${to_str/ v}])"
+
+let to_str/exec-full
+    : ToText Exec
+    = to_str/-full Exec to_str/exec
+
+let to_str/script-full
+    : ToText Script
+    = to_str/-full Script to_str/script
+
+let std =
+      let dirname
+          : Path → Path
+          = let comp = u/.fun/compose Path Path Path
+
+            let rev = u/.list/reverse Text
+
+            let drop = u/.list/drop 1 Text
+
+            in  comp rev (comp drop rev)
+
+      let mkdir_p
+          : Path → Exec
+          = λ(full_path : Path) →
+              cmd::{
+              , cmd = [ "mkdir" ]
+              , args = strlist [ "-p", Path/to_text (dirname full_path) ]
+              }
+
+      let tee
+          : Path → Exec
+          = λ(full_path : Path) →
+                cmd::{
+                , cmd = [ "tee" ]
+                , args = strlist [ Path/to_text full_path ]
+                }
+              ⫽ out/stream
+
+      let git
+          : List Text → Exec
+          = λ(args : List Text) →
+              cmd::{ cmd = [ "/usr", "bin", "git" ], args = strlist args }
+
+      let tar
+          : List Text → Exec
+          = λ(args : List Text) →
+                cmd::{ cmd = [ "/usr", "bin", "tar" ], args = strlist args }
+              ⫽ out/stream
+
+      let pv
+          : Text → Exec
+          = λ(name : Text) →
+                cmd::{
+                , cmd = [ "/usr", "bin", "pv" ]
+                , args = strlist [ "--name", name ]
+                }
+              ⫽ out/stream
+
+      let sudo
+          : List Text → Exec
+          = λ(cmdline : List Text) →
+              cmd::{ cmd = [ "/usr", "bin", "sudo" ], args = strlist cmdline }
+
+      let chmod
+          : Text → Path → Exec
+          = λ(mode : Text) →
+            λ(path : Path) →
+              cmd::{
+              , cmd = [ "/usr", "bin", "chmod" ]
+              , args = strlist [ mode, Path/to_text path ]
+              }
+
+      let xs/cmd
+          : Exec
+          = cmd::{ cmd = [ "/usr", "local", "bin", "xs" ] }
+
+      let xs
+          : List Text → Exec
+          = λ(args : List Text) → xs/cmd ⫽ { args = strlist args }
+
+      let xs_c
+          : Text → Exec
+          = λ(script-xs : Text) →
+                xs/cmd
+              ⫽ { args = [ Expr.str "-c", Expr.fatstr { f = 3, s = script-xs } ]
+                }
+
+      let xs/io_setting = λ(inp_name : Text) → in/stream inp_name ⫽ out/stream
+
+      let xs_i
+          : Text → Exec
+          = λ(inp_name : Text) → xs/cmd ⫽ xs/io_setting inp_name
+
+      let jxs_i
+          : Text → Exec
+          = λ(inp_name : Text) → xs [ "-j" ] ⫽ xs/io_setting inp_name
+
+      let make_script
+          : ∀(a : Type) → (a → Text) → List a → Text
+          = λ(a : Type) →
+            λ(f : a → Text) →
+              u/.fun/compose
+                (List a)
+                (List Text)
+                Text
+                (u/.list/map a Text f)
+                u/.text/concat
+
+      let echo
+          : List Expr → Exec
+          = λ(args : List Expr) →
+              let I/V =
+                    λ(index : Type) →
+                    λ(value : Type) →
+                      { index : index, value : value }
+
+              let K = I/V Natural
+
+              let I = I/V Text
+
+              let I/make
+                  : List Expr → List (I Expr)
+                  = let d = K Expr
+
+                    let e = I Expr
+
+                    let map = u/.list/map d e
+
+                    let h
+                        : d → e
+                        = λ(_ : K Expr) → _ with index = Natural/show _.index
+
+                    let a = List Expr
+
+                    let b = List d
+
+                    let c = List e
+
+                    let comp = u/.fun/compose a b c
+
+                    let f
+                        : a → b
+                        = u/.list/indexed Expr
+
+                    let g
+                        : b → c
+                        = map h
+
+                    let make
+                        : a → c
+                        = comp f g
+
+                    in  make
+
+              let args/indexed
+                  : List (I Expr)
+                  = I/make args
+
+              let arg/name
+                  : I Expr → Text
+                  = λ(i : I Expr) → i.index
+
+              let echo_script/lib
+                  : Text
+                  = let expr-to-txt
+                        : I Expr → Text
+                        = λ(i : I Expr) →
+                            let istr = to_str/str (arg/name i)
+
+                            in  ''
+                                    WriteFile("/dev/stdout", (var: ${istr})),
+                                ''
+
+                    in  make_script (I Expr) expr-to-txt args/indexed
+
+              let echo_script
+                  : Text
+                  = "Script([${echo_script/lib}])"
+
+              let fwd_args
+                  : List Expr
+                  = let arg-to-fwd
+                        : I Expr → List Expr
+                        = λ(i : I Expr) →
+                            let name = Expr.str (arg/name i)
+
+                            in  [ Expr.str "-ah", name, i.value ]
+
+                    let map = u/.list/map (I Expr) (List Expr)
+
+                    let concat = u/.list/concat Expr
+
+                    in  concat (map arg-to-fwd args/indexed)
+
+              let echo_cmd
+                  : Exec
+                  = let _ = xs [ "-c" ] ⫽ out/stream
+
+                    in  _
+                      with args =
+                            _.args
+                          # [ Expr.fatstr { f = 3, s = echo_script } ]
+                          # fwd_args
+
+              in  echo_cmd
+
+      let jq
+          : Text → Text → List Text → Exec
+          = λ(flags : Text) →
+            λ(script : Text) →
+            λ(args : List Text) →
+                cmd::{
+                , cmd = [ "jq" ]
+                , args =
+                      [ Expr.str flags, Expr.fatstr { f = 3, s = script } ]
+                    # strlist args
+                }
+              ⫽ out/stream
+
+      let jq/flags = "-esRrjc"
+
+      let jq/- = jq jq/flags
+
+      let noarg = [] : List Text
+
+      let str/take
+          : Natural → Exec
+          = λ(n : Natural) → jq/- ".[0:64]" noarg
+
+      let str/split0
+          : Text → Exec
+          = λ(jq : Text) → jq/- "split(\"\\u0000\") | sort | ${jq}" noarg
+
+      let if-jq
+          : Text → Text → Text → Args → Exec
+          = λ(condition_jq : Text) →
+            λ(if_true_txt : Text) →
+            λ(if_false_txt : Text) →
+            λ(args : Args) →
+              let script =
+                    ''
+                      if ${condition_jq} then $if_true_txt else $if_false_txt end
+                    ''
+
+              let _ = jq/- script ([] : List Text)
+
+              in  _
+                with args =
+                      _.args
+                    # [ str "--arg"
+                      , str "if_true_txt"
+                      , fat5 if_true_txt
+                      , str "--arg"
+                      , str "if_false_txt"
+                      , fat5 if_false_txt
+                      ]
+                    # args
+
+      let base64/enc/jq
+          : Text
+          = ''
+                $val | @base64
+            ''
+
+      let base64/dec/jq
+          : Text
+          = ''
+                $val | @base64d
+            ''
+
+      let base64/enc
+          : Text → Exec
+          = λ(val : Text) →
+              let _ = jq/- base64/enc/jq [ "-n", "--arg", "val" ]
+
+              in  _
+                with args = _.args # [ fatstr 8 val ]
+
+      let base64/dec
+          : Text → Exec
+          = λ(val : Text) →
+              let _ = jq/- base64/dec/jq [ "-n", "--arg", "val" ]
+
+              in  _
+                with args = _.args # [ fatstr 8 val ]
+
+      in  { dirname
+          , mkdir_p
+          , tee
+          , if-jq
+          , git
+          , str/take
+          , str/split0
+          , noarg
+          , jq
+          , jq/-
+          , jq/flags
+          , tar
+          , pv
+          , sudo
+          , chmod
+          , echo
+          , xs/io_setting
+          , xs_i
+          , xs_c
+          , xs
+          , xs/cmd
+          , jxs_i
+          , base64/enc
+          , base64/dec
+          }
+
+in  { allowed_to_fail
+    , alias
+    , arg/append
+    , can_fail
+    , cmd
+    , cwd
+    , dealias
+    , exec
+    , exec_
+    , Exec
+    , execlist
+    , Expr
+    , fat1
+    , fat3
+    , fat5
+    , fatstr
+    , in/file
+    , in/stream
+    , in/tty
+    , out/display
+    , out/null
+    , Output
+    , out/stream
+    , out/string
+    , Path
+    , Path/to_text
+    , Path/basename
+    , Rval
+    , Script = xs/.Script
+    , set
+    , std
+    , Stdin
+    , Stmt
+    , str
+    , strlist
+    , ToText
+    , to_str/
+    , to_str/stmt
+    , to_str/expr
+    , to_str/str
+    , to_str/exec
+    , to_str/-full
+    , to_str/exec-full
+    , to_str/script
+    , to_str/script-full
+    , var
+    , write_file
+    , Writing
+    , Args
+    }

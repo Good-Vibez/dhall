@@ -1,0 +1,21 @@
+{- vim: set ft=dhall : -}
+let class = ./list.class Text "XS Script"
+
+let opn =
+      λ(_ : class.params.Unit) →
+        [ ''
+          Script([
+          ''
+        ]
+
+let cls =
+      λ(io : class.params.io) →
+          io
+        # [ ''
+
+            ])''
+          ]
+
+let proto = class.proto ⫽ { opn, cls }
+
+in  class ⫽ { proto }
