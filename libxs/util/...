@@ -180,6 +180,12 @@ let map/values
           sha256:ae02cfb06a9307cbecc06130e84fd0c7b96b7f1f11648961e1b030ec00940be8
       ? https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Map/values.dhall
 
+let map/map
+    : ∀(k : Type) → ∀(a : Type) → ∀(b : Type) → (a → b) → Map k a → Map k b
+    =   https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Map/map.dhall
+          sha256:23e09b0b9f08649797dfe1ca39755d5e1c7cad2d0944bdd36c7a0bf804bde8d0
+      ? https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Map/map.dhall
+
 let nat/eq
     : Natural → Natural → Bool
     =   https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Natural/equal.dhall
@@ -274,6 +280,7 @@ in  { json/
     , Map/Entry
     , map/keys
     , map/values
+    , map/map
     , nat/eq
     , opt/default
     , opt/to_list
