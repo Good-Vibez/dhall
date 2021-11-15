@@ -18,7 +18,9 @@ let fun/id
 
 let list/append
     : ∀(a : Type) → List a → a → List a
-    = ./list/append.dhall
+    =   ./list/append.dhall
+          sha256:c15695120f116d4dbbb79f9de4d3b745bd2c73626324ca8739b0c79a55a89734
+      ? ./list/append.dhall
 
 let list/append2 = λ(a : Type) → λ(x : a) → λ(l : List a) → list/append a l x
 
@@ -57,6 +59,20 @@ let list/fold
           sha256:10bb945c25ab3943bd9df5a32e633cbfae112b7d3af38591784687e436a8d814
       ? https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/List/fold.dhall
 
+let list/fold2
+    : ∀(a : Type) →
+      ∀(list : Type) →
+      ∀(nil : list) →
+      ∀(cons : a → list → list) →
+      List a →
+        list
+    = λ(a : Type) →
+      λ(list : Type) →
+      λ(nil : list) →
+      λ(cons : a → list → list) →
+      λ(la : List a) →
+        list/fold a la list cons nil
+
 let list/fold_left
     : ∀(a : Type) →
       List a →
@@ -67,6 +83,20 @@ let list/fold_left
     =   https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/List/foldLeft.dhall
           sha256:3c6ab57950fe644906b7bbdef0b9523440b6ee17773ebb8cbd41ffacb8bfab61
       ? https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/List/foldLeft.dhall
+
+let list/fold_left2
+    : ∀(a : Type) →
+      ∀(list : Type) →
+      ∀(nil : list) →
+      ∀(cons : list → a → list) →
+      List a →
+        list
+    = λ(a : Type) →
+      λ(list : Type) →
+      λ(nil : list) →
+      λ(cons : list → a → list) →
+      λ(la : List a) →
+        list/fold_left a la list cons nil
 
 let list/head
     : ∀(a : Type) → List a → Optional a
@@ -86,7 +116,9 @@ let list/indexed
 
 let list/init
     : ∀(a : Type) → a → List a
-    = ./list/init.dhall
+    =   ./list/init.dhall
+          sha256:9fadcc569cde4e323ebf20992e4bb14c9a5b7b84ee9b245bb748dbd1a17d205c
+      ? ./list/init.dhall
 
 let list/map
     : ∀(a : Type) → ∀(b : Type) → (a → b) → List a → List b
@@ -172,6 +204,12 @@ let opt/map
           sha256:501534192d988218d43261c299cc1d1e0b13d25df388937add784778ab0054fa
       ? https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Optional/map.dhall
 
+let opt/null
+    : ∀(a : Type) → Optional a → Bool
+    =   https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Optional/null.dhall
+          sha256:3871180b87ecaba8b53fffb2a8b52d3fce98098fab09a6f759358b9e8042eedc
+      ? https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Optional/null.dhall
+
 let op/ =
         https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Operator/package.dhall
           sha256:861f724704a7b4755c96f173e54d03f314492a2d046723404c31ff612b7bf2e6
@@ -203,7 +241,10 @@ let text/prepend
     : Text → Text → Text
     = λ(p : Text) → λ(t : Text) → p ++ t
 
-let tuple/ = ./tuple.dhall
+let tuple/ =
+        ./tuple.dhall
+          sha256:1bc2c1595209cba1c49dfd486cca91968d7d8b5dbac56fc7ed25e5a75b06737e
+      ? ./tuple.dhall
 
 in  { json/
     , fun/compose
@@ -219,7 +260,9 @@ in  { json/
     , list/init
     , list/filter
     , list/fold
+    , list/fold2
     , list/fold_left
+    , list/fold_left2
     , list/map
     , list/nth
     , list/flat_map
@@ -235,6 +278,7 @@ in  { json/
     , opt/default
     , opt/to_list
     , opt/map
+    , opt/null
     , op/
     , text/append
     , text/concat
