@@ -192,6 +192,12 @@ let nat/eq
           sha256:7f108edfa35ddc7cebafb24dc073478e93a802e13b5bc3fd22f4768c9b066e60
       ? https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Natural/equal.dhall
 
+let bool/not
+    : Bool → Bool
+    =   https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Bool/not.dhall
+          sha256:723df402df24377d8a853afed08d9d69a0a6d86e2e5b2bac8960b0d4756c7dc4
+      ? https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Bool/not.dhall
+
 let opt/default
     : ∀(a : Type) → a → Optional a → a
     =   https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Optional/default.dhall
@@ -215,6 +221,16 @@ let opt/null
     =   https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Optional/null.dhall
           sha256:3871180b87ecaba8b53fffb2a8b52d3fce98098fab09a6f759358b9e8042eedc
       ? https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Optional/null.dhall
+
+let opt/is_some
+    : ∀(a : Type) → Optional a → Bool
+    = λ(a : Type) → fun/compose (Optional a) Bool Bool (opt/null a) bool/not
+
+let opt/len
+    : ∀(a : Type) → Optional a → Natural
+    =   https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Optional/length.dhall
+          sha256:f168337c5244ded68c05ecf32ce068b6b87158881d07e87b8cb6853fc6982a85
+      ? https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Optional/length.dhall
 
 let op/ =
         https://raw.githubusercontent.com/dhall-lang/dhall-lang/v21.0.0/Prelude/Operator/package.dhall
@@ -286,6 +302,8 @@ in  { json/
     , opt/to_list
     , opt/map
     , opt/null
+    , opt/is_some
+    , opt/len
     , op/
     , text/append
     , text/concat
