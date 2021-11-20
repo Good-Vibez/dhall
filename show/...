@@ -1,1 +1,2 @@
-package.dhall
+-- vim: ft=dhall
+./package.dhall

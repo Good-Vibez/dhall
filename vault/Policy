@@ -1,1 +1,2 @@
-Policy.dhall
+-- vim: ft=dhall
+./Policy.dhall
