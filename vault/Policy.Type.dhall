@@ -48,6 +48,7 @@ let Param
 
 in  { Type =
         { to_json : ToJson Entry
+        , to_hcl : Show Entry
         , param : Param
         , Capability/show : Show Capability
         , Capability/to_json : ToJson Capability

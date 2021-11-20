@@ -36,12 +36,37 @@ let to_json =
       λ(entry : T.Entry) →
         json/.object
           ( toMap
-              { path = json/.string (Path/unix entry.path)
-              , capabilities = Capabilities/to_json entry.capabilities
-              , allowed_parameters =
-                  AllowedParams/to_json entry.allowed_parameters
+              { path =
+                  json/.object
+                    [ { mapKey = Path/unix entry.path
+                      , mapValue =
+                          json/.object
+                            ( toMap
+                                { capabilities =
+                                    Capabilities/to_json entry.capabilities
+                                , allowed_parameters =
+                                    AllowedParams/to_json
+                                      entry.allowed_parameters
+                                }
+                            )
+                      }
+                    ]
               }
           )
+
+let to_hcl =
+      λ(entry : T.Entry) →
+        ''
+        path "${Path/unix entry.path}"
+        {
+          capabilities = ${json/.render
+                             (Capabilities/to_json entry.capabilities)}
+          allowed_parameters = ${json/.render
+                                   ( AllowedParams/to_json
+                                       entry.allowed_parameters
+                                   )}
+        }
+        ''
 
 let param =
     -- Name	Description
@@ -132,6 +157,7 @@ let param =
 
 in    { param
       , to_json
+      , to_hcl
       , Capability/show
       , AllowedParams/to_json
       , AllowedParamsList/to_json
