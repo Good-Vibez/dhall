@@ -138,6 +138,10 @@ let var
     : Text → Expr
     = Expr.var
 
+let source
+    : Text → Expr
+    = Expr.source
+
 let to_str/
     : ∀(a : Type) → (a → xs/fmt/.Tkn) → ToText a
     = λ(a : Type) → λ(f : a → xs/fmt/.Tkn) → λ(v : a) → to_str a f [ v ]
@@ -198,6 +202,15 @@ let std =
           = λ(full_path : Path) →
                 cmd::{
                 , cmd = [ "tee" ]
+                , args = strlist [ Path/to_text full_path ]
+                }
+              ⫽ out/stream
+
+      let cat
+          : Path → Exec
+          = λ(full_path : Path) →
+                cmd::{
+                , cmd = [ "cat" ]
                 , args = strlist [ Path/to_text full_path ]
                 }
               ⫽ out/stream
@@ -450,6 +463,35 @@ let std =
               in  _
                 with args = _.args # [ fatstr 8 val ]
 
+      let stdout = [ "", "dev", "stdout" ]
+
+      let print = write_file stdout
+
+      let printenv
+          : Text → Exec
+          = λ(name : Text) →
+              let printenv =
+                    alias
+                      "printenv"
+                      (   cmd::{ cmd = [ "printenv" ], args = strlist [ name ] }
+                        ⫽ out/stream
+                      )
+
+              let join =
+                    alias
+                      "join"
+                      (   cmd::{ cmd = [ "tr" ], args = strlist [ "-d", "\n" ] }
+                        ⫽ in/stream "printenv"
+                        ⫽ out/stream
+                      )
+
+              let a =
+                    to_str/script-full [ printenv, join, print (source "join") ]
+
+              let xs = cmd::{ cmd = [ "xs" ], args = [ str "-c", fat3 a ] }
+
+              in  xs
+
       in  { dirname
           , mkdir_p
           , tee
@@ -474,6 +516,10 @@ let std =
           , jxs_i
           , base64/enc
           , base64/dec
+          , printenv
+          , cat
+          , stdout
+          , print
           }
 
 in  { allowed_to_fail
@@ -522,6 +568,7 @@ in  { allowed_to_fail
     , to_str/script
     , to_str/script-full
     , var
+    , source
     , write_file
     , Writing
     , Args

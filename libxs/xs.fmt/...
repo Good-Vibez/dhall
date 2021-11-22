@@ -11,6 +11,8 @@ let Expr = xs/.Expr
 
 let Stmt = xs/.Stmt
 
+let Stmt/ = xs/.Stmt/
+
 let Setg = xs/.Setting
 
 let Wrtg = xs/.Writing
@@ -18,6 +20,8 @@ let Wrtg = xs/.Writing
 let Rval = xs/.Rval
 
 let Tkn = List Text
+
+let Fmt = λ(V : Type) → V → Tkn
 
 let empty = [] : Tkn
 
@@ -239,9 +243,11 @@ let fmt/rval-for-writing
           rv
 
 let fmt/setting
-    : Text → Setg → Tkn
-    = λ(kw : Text) →
-      λ(stn : Setg) →
+    : ∀(V : Type) → Fmt V → Text → Setg V → Tkn
+    = λ(V : Type) →
+      λ(fmt/rval : Fmt V) →
+      λ(kw : Text) →
+      λ(stn : Setg V) →
           [ ''
 
             ${"  "}''
@@ -253,12 +259,15 @@ let fmt/setting
         # fmt/rval stn._2
         # [ ")," ]
 
-let fmt/stmt
-    : Stmt → Tkn
-    = λ(_ : Stmt) →
+let fmt/stmt/
+    : ∀(V : Type) → Fmt V → Fmt V → Stmt/ V → Tkn
+    = λ(V : Type) →
+      λ(fmt/rval : Fmt V) →
+      λ(fmt/rval-for-writing : Fmt V) →
+      λ(_ : Stmt/ V) →
         merge
-          { set = fmt/setting "Let"
-          , alias = fmt/setting "Alias"
+          { set = fmt/setting V fmt/rval "Let"
+          , alias = fmt/setting V fmt/rval "Alias"
           , dealias =
               λ(name : Text) →
                   [ ''
@@ -268,13 +277,13 @@ let fmt/stmt
                 # fmt/str name
                 # [ ")," ]
           , write_file =
-              λ(w : Wrtg) →
+              λ(w : Wrtg V) →
                 let path
                     : Path
                     = w._1
 
                 let rvl
-                    : Rval
+                    : V
                     = w._2
 
                 in    [ ''
@@ -287,6 +296,10 @@ let fmt/stmt
                     # [ ")," ]
           }
           _
+
+let fmt/stmt
+    : Stmt → Tkn
+    = fmt/stmt/ Rval fmt/rval fmt/rval-for-writing
 
 let to_str
     : ∀(a : Type) → (a → Tkn) → List a → Text

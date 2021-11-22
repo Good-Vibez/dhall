@@ -55,22 +55,26 @@ let Exec/default
     : Exec
     = { cmd, args, env, cwd, output, stdin, allowed_to_fail }
 
+let Setting = λ(Rval : Type) → { _1 : Text, _2 : Rval }
+
+let Writing = λ(Rval : Type) → { _1 : Path, _2 : Rval }
+
+let Stmt/ =
+      λ(Rval : Type) →
+        < set : Setting Rval
+        | alias : Setting Rval
+        | dealias : Text
+        | write_file : Writing Rval
+        >
+
 let Rval = < expr : Expr | exec : Exec >
 
-let Setting = { _1 : Text, _2 : Rval }
-
-let Writing = { _1 : Path, _2 : Rval }
-
-let Stmt =
-      < set : Setting
-      | alias : Setting
-      | dealias : Text
-      | write_file : Writing
-      >
+let Stmt = Stmt/ Rval
 
 let Script = List Stmt
 
 in  { Script
+    , Stmt/
     , Stmt
     , Setting
     , Rval
